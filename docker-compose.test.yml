@@ -1,0 +1,37 @@
+services:
+  # Delta: join test — bootstraps from alpha
+  delta:
+    build: .
+    container_name: delta
+    profiles: ["join-test"]
+    command: ["node", "--name", "delta", "--port", "8100", "--data-dir", "/data", "--peers", "alpha:8100"]
+    ports:
+      - "8104:8100"
+    volumes:
+      - delta-data:/data
+    networks:
+      - constellation
+
+  # Attacker: key theft test — mounts alpha's volume read-only to steal key
+  attacker:
+    build: .
+    container_name: attacker
+    profiles: ["theft-test"]
+    ports:
+      - "8105:8100"
+    volumes:
+      - alpha-data:/stolen-key:ro
+      - attacker-data:/data
+    networks:
+      - constellation
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /data/identity
+        cp /stolen-key/identity/node-key.pem /data/identity/node-key.pem
+        exec constellation-poc node --name attacker --port 8100 --data-dir /data --peers beta:8100,gamma:8100
+
+volumes:
+  delta-data:
+  attacker-data:

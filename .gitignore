@@ -1,0 +1,16 @@
+# Binaries
+constellation-poc
+constellation
+*.exe
+
+# Test artifacts
+/tmp/constellation/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

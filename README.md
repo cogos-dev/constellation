@@ -267,9 +267,16 @@ apps/constellation-poc/
     └── run_scenarios.sh        # Run all, report PASS/FAIL
 ```
 
+## Connection to CogOS
+
+Constellation is the identity and trust organelle in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem. Each event in the ledger is a CogBlock — the quantum of distinction in the CogOS ontology. In Constellation's context, it represents a timestamped, hash-chained state transition that can be verified by any peer and replicated via BEP (Block Exchange Protocol).
+
+For the full system specification: [CogOS System Spec](https://github.com/cogos-dev/cogos/blob/main/docs/SYSTEM-SPEC.md)
+For the research paper thesis: [Paper Thesis](docs/PAPER.md)
+
 ## Theoretical Context
 
-This PoC implements the trust layer described in the [Constellation Architecture Synthesis](../../docs/constellation-architecture-synthesis.md). The protocol emerges from the SRC (Self-Referential Cosmology) framework, which models identity as a fixed point of a self-referential validation process:
+The protocol models identity as a fixed point of a self-referential validation process:
 
 - **Self-referential closure** (`x = F(x)`): A node is the eigenform of its own coherence validation
 - **Thermodynamic cost** (ln(2) per distinction): Every event that passes validation has paid its Landauer cost

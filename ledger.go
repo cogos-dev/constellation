@@ -2,7 +2,7 @@
 //
 // Adapted from apps/cogos-v3/ledger.go. Events are canonicalized (RFC 8785),
 // hashed (SHA-256), and chained via prior_hash fields.
-package main
+package constellation
 
 import (
 	"crypto/sha256"

@@ -3,7 +3,7 @@
 // Uses go-git/v5 to manage a bare git repo where events are committed as
 // individual JSON files under events/{seq:08d}.json. The tree hash of the
 // events/ directory serves as the node's state fingerprint for mutual verification.
-package main
+package constellation
 
 import (
 	"encoding/json"

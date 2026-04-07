@@ -1,6 +1,6 @@
 # Binaries
 constellation-poc
-constellation
+/constellation
 *.exe
 
 # Test artifacts

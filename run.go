@@ -1,11 +1,11 @@
-// main.go — Constellation Protocol PoC CLI.
+// run.go — Constellation Protocol PoC CLI entry point.
 //
 // Subcommands:
 //   node    — Start a constellation node
 //   inject  — Inject an event into a running node
 //   tamper  — Corrupt an event in a node's git store
 //   status  — Query a node's state and peer trust
-package main
+package constellation
 
 import (
 	"bytes"
@@ -20,7 +20,8 @@ import (
 	"time"
 )
 
-func main() {
+// Run is the CLI entry point for the constellation binary.
+func Run() {
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(1)

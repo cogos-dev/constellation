@@ -2,7 +2,7 @@
 //
 // Adapted from apps/cogos/bep_tls.go. Simplified to just key operations:
 // generate, load, sign, verify, and NodeID derivation (SHA-256 of pubkey DER).
-package main
+package constellation
 
 import (
 	"crypto/ecdsa"

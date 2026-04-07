@@ -2,7 +2,7 @@
 //
 // Every 5 seconds: generate a simulated event, append to ledger, commit
 // to git, sign the state snapshot, POST to all known peers.
-package main
+package constellation
 
 import (
 	"bytes"

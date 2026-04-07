@@ -3,7 +3,7 @@
 // Trust is tracked per-peer via exponential moving average (EMA) of
 // heartbeat consistency. Thresholds: trusted >= 0.7, pending >= 0.4,
 // suspect >= 0.2, rejected < 0.2.
-package main
+package constellation
 
 import (
 	"crypto/ecdsa"

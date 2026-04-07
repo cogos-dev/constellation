@@ -4,7 +4,7 @@
 //   1. Hash chain integrity (event[i].prior_hash == hash(event[i-1]))
 //   2. Schema validation (required fields present, valid timestamps)
 //   3. Temporal monotonicity (timestamps non-decreasing, sequences contiguous)
-package main
+package constellation
 
 import (
 	"fmt"

@@ -7,7 +7,7 @@
 //   POST /join       — new node announces itself
 //   GET  /health     — self coherence check
 //   GET  /state      — full dump for testing
-package main
+package constellation
 
 import (
 	"bytes"

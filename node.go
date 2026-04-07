@@ -3,7 +3,7 @@
 // A Node holds its identity (ECDSA keypair), git-backed event store,
 // peer registry, and coherence state. It manages startup (init repo,
 // load/generate keys) and graceful shutdown.
-package main
+package constellation
 
 import (
 	"context"

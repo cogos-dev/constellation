@@ -1,5 +1,7 @@
 # Constellation Protocol — Proof of Concept
 
+> Part of the [CogOS ecosystem](https://github.com/cogos-dev) — **how it TRUSTS**
+
 A distributed trust protocol where **identity is a dynamical property** — coherence with history — rather than a static credential. Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from temporal consistency rather than certificate authority.
 
 ## What This Proves
@@ -269,7 +271,19 @@ apps/constellation-poc/
 
 ## Connection to CogOS
 
-Constellation is the identity and trust organelle in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem. Each event in the ledger is a CogBlock — the quantum of distinction in the CogOS ontology. In Constellation's context, it represents a timestamped, hash-chained state transition that can be verified by any peer and replicated via BEP (Block Exchange Protocol).
+Constellation is the trust organelle in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem — it answers "how does the cell trust?" CogOS externalizes attention and executive function for intelligent systems; Constellation externalizes identity verification and trust scoring across distributed nodes.
+
+In the CogOS cell model, Constellation enables the 4-node topology (laptop, phone, desktop, cloud) where each node maintains its own workspace but verifies peer coherence through temporal coupling. The kernel imports Constellation as a Go library via the `ConstellationBridge` interface — in standalone mode, a `NilBridge` provides healthy defaults with zero overhead.
+
+Each event in the ledger is a CogBlock — the quantum of distinction in the CogOS ontology. Workspace sync uses Syncthing BEP as the transport layer, with signed `SyncEnvelopes` gated by trust score before ingestion.
+
+| Ecosystem | |
+|-----------|--|
+| [cogos](https://github.com/cogos-dev/cogos) | The kernel — what it IS |
+| **constellation** | **Trust — how it TRUSTS** |
+| [mod3](https://github.com/cogos-dev/mod3) | Modality — how it ACTS |
+| [charts](https://github.com/cogos-dev/charts) | Deployment — how it DEPLOYS |
+| [desktop](https://github.com/cogos-dev/desktop) | Interface — how you USE it |
 
 For the full system specification: [CogOS System Spec](https://github.com/cogos-dev/cogos/blob/main/docs/SYSTEM-SPEC.md)
 For the research paper thesis: [Paper Thesis](docs/PAPER.md)

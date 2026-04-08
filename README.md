@@ -16,7 +16,7 @@ Each node validates its own coherence through a 3-layer stack applied to its git
 - **Schema validation**: Required fields present, valid RFC 3339 timestamps, non-empty hashes
 - **Temporal monotonicity**: Timestamps non-decreasing, sequence numbers contiguous
 
-A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. This is the eigenform property: the system is the fixed point of its own validation process. `x = F(x)`.
+A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. This is the eigenform property -- the system is a self-consistent fixed point of its own validation process, where re-applying the rules leaves the system unchanged. `x = F(x)`.
 
 ### 2. O(1) Mutual Verification
 
@@ -284,6 +284,9 @@ Each event in the ledger is a CogBlock — the quantum of distinction in the Cog
 | [mod3](https://github.com/cogos-dev/mod3) | Modality — how it ACTS |
 | [charts](https://github.com/cogos-dev/charts) | Deployment — how it DEPLOYS |
 | [desktop](https://github.com/cogos-dev/desktop) | Interface — how you USE it |
+| [skills](https://github.com/cogos-dev/skills) | Plugins — what it CAN DO |
+| [research](https://github.com/cogos-dev/research) | Theory — why it WORKS |
+| [openclaw-plugin](https://github.com/cogos-dev/openclaw-plugin) | OpenClaw integration — how it CONNECTS |
 
 For the full system specification: [CogOS System Spec](https://github.com/cogos-dev/cogos/blob/main/docs/SYSTEM-SPEC.md)
 For the research paper thesis: [Paper Thesis](docs/PAPER.md)

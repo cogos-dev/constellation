@@ -1,8 +1,8 @@
 # Constellation Protocol — Proof of Concept
 
-> Part of the [CogOS ecosystem](https://github.com/cogos-dev) — **how it TRUSTS**
+A distributed identity protocol where trust is earned through temporal consistency, not granted by authority.
 
-A distributed trust protocol where **identity is a dynamical property** — coherence with history — rather than a static credential. Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from temporal consistency rather than certificate authority.
+Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from behavioral history rather than certificate authority. Stolen keys are insufficient for impersonation because trust is coupled to the full event chain, not just a credential.
 
 ## What This Proves
 
@@ -16,7 +16,7 @@ Each node validates its own coherence through a 3-layer stack applied to its git
 - **Schema validation**: Required fields present, valid RFC 3339 timestamps, non-empty hashes
 - **Temporal monotonicity**: Timestamps non-decreasing, sequence numbers contiguous
 
-A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. This is the eigenform property -- the system is a self-consistent fixed point of its own validation process, where re-applying the rules leaves the system unchanged. `x = F(x)`.
+A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. The validation is idempotent -- re-applying the rules to a consistent ledger leaves it unchanged.
 
 ### 2. O(1) Mutual Verification
 
@@ -26,7 +26,7 @@ Nodes exchange signed heartbeats containing `{node_id, tree_hash, seq, last_hash
 2. Verify NodeID matches public key (one hash)
 3. Check `seq == last_known_seq + 1` (one comparison)
 
-No event replay, no Merkle proof traversal, no state synchronization. The tree hash of the git events directory serves as a compact state fingerprint — if two nodes agree on the tree hash, they agree on all events. This is temporal coupling, not mechanical coupling.
+No event replay, no Merkle proof traversal, no state synchronization. The tree hash of the git events directory serves as a compact state fingerprint -- if two nodes agree on the tree hash, they agree on all events.
 
 ### 3. Stolen Keys Insufficient for Impersonation
 
@@ -271,32 +271,29 @@ apps/constellation-poc/
 
 ## Connection to CogOS
 
-Constellation is the trust organelle in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem — it answers "how does the cell trust?" CogOS externalizes attention and executive function for intelligent systems; Constellation externalizes identity verification and trust scoring across distributed nodes.
+Constellation is the trust layer in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem. It handles identity verification and trust scoring across distributed nodes.
 
-In the CogOS cell model, Constellation enables the 4-node topology (laptop, phone, desktop, cloud) where each node maintains its own workspace but verifies peer coherence through temporal coupling. The kernel imports Constellation as a Go library via the `ConstellationBridge` interface — in standalone mode, a `NilBridge` provides healthy defaults with zero overhead.
+In a multi-node CogOS deployment (laptop, phone, desktop, cloud), each node maintains its own workspace and verifies peer coherence through Constellation. The kernel imports Constellation as a Go library via the `ConstellationBridge` interface -- in standalone mode, a `NilBridge` provides healthy defaults with zero overhead.
 
-Each event in the ledger is a CogBlock — the quantum of distinction in the CogOS ontology. Workspace sync uses Syncthing BEP as the transport layer, with signed `SyncEnvelopes` gated by trust score before ingestion.
+Workspace sync uses Syncthing BEP as the transport layer, with signed `SyncEnvelopes` gated by trust score before ingestion.
 
-| Ecosystem | |
-|-----------|--|
-| [cogos](https://github.com/cogos-dev/cogos) | The kernel — what it IS |
-| **constellation** | **Trust — how it TRUSTS** |
-| [mod3](https://github.com/cogos-dev/mod3) | Modality — how it ACTS |
-| [charts](https://github.com/cogos-dev/charts) | Deployment — how it DEPLOYS |
-| [desktop](https://github.com/cogos-dev/desktop) | Interface — how you USE it |
-| [skills](https://github.com/cogos-dev/skills) | Plugins — what it CAN DO |
-| [research](https://github.com/cogos-dev/research) | Theory — why it WORKS |
-| [openclaw-plugin](https://github.com/cogos-dev/openclaw-plugin) | OpenClaw integration — how it CONNECTS |
+| Repo | Purpose |
+|------|---------|
+| [cogos](https://github.com/cogos-dev/cogos) | The daemon |
+| **constellation** | **Distributed identity and trust -- this repo** |
+| [mod3](https://github.com/cogos-dev/mod3) | Voice -- multi-model TTS |
+| [charts](https://github.com/cogos-dev/charts) | Helm charts for deployment |
+| [desktop](https://github.com/cogos-dev/desktop) | macOS dashboard app |
+| [skills](https://github.com/cogos-dev/skills) | Agent skill library |
 
 For the full system specification: [CogOS System Spec](https://github.com/cogos-dev/cogos/blob/main/docs/SYSTEM-SPEC.md)
 For the research paper thesis: [Paper Thesis](docs/PAPER.md)
 
 ## Theoretical Context
 
-The protocol models identity as a fixed point of a self-referential validation process:
+The protocol models identity as a fixed point of a self-validating process:
 
-- **Self-referential closure** (`x = F(x)`): A node is the eigenform of its own coherence validation
-- **Thermodynamic cost** (ln(2) per distinction): Every event that passes validation has paid its Landauer cost
+- **Self-referential closure** (`x = F(x)`): A node's coherence check is idempotent -- re-applying validation leaves the system unchanged
 - **Temporal coupling** (not mechanical): Nodes couple through shared timeline, not forced consensus
 
-The key insight: blockchain's O(n^2) consensus cost arises from treating identity as a static credential in an adversarial environment. When identity is instead a dynamical property — coherence with history — verification becomes O(1) per peer and stolen credentials become insufficient for impersonation.
+The key insight: blockchain's O(n^2) consensus cost arises from treating identity as a static credential in an adversarial environment. When identity is instead tied to behavioral history, verification becomes O(1) per peer and stolen credentials become insufficient for impersonation.

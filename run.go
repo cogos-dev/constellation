@@ -69,7 +69,7 @@ func cmdNode() {
 			name = args[i]
 		case "--port":
 			i++
-			fmt.Sscanf(args[i], "%d", &port)
+			_, _ = fmt.Sscanf(args[i], "%d", &port)
 		case "--peers":
 			i++
 			peersStr = args[i]
@@ -145,8 +145,10 @@ func cmdInject() {
 		fmt.Fprintf(os.Stderr, "inject failed: %v\n", err)
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
-	io.Copy(os.Stdout, resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+	if _, err := io.Copy(os.Stdout, resp.Body); err != nil {
+		fmt.Fprintf(os.Stderr, "read response failed: %v\n", err)
+	}
 	fmt.Println()
 }
 
@@ -173,7 +175,7 @@ func cmdTamper() {
 		fmt.Fprintf(os.Stderr, "get state failed: %v\n", err)
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var state struct {
 		State struct {
@@ -213,10 +215,13 @@ func cmdStatus() {
 		fmt.Fprintf(os.Stderr, "get state failed: %v\n", err)
 		os.Exit(1)
 	}
-	defer stateResp.Body.Close()
+	defer func() { _ = stateResp.Body.Close() }()
 
 	var stateData json.RawMessage
-	json.NewDecoder(stateResp.Body).Decode(&stateData)
+	if err := json.NewDecoder(stateResp.Body).Decode(&stateData); err != nil {
+		fmt.Fprintf(os.Stderr, "decode state failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Get health.
 	healthResp, err := client.Get(fmt.Sprintf("%s/health", target))
@@ -224,10 +229,13 @@ func cmdStatus() {
 		fmt.Fprintf(os.Stderr, "get health failed: %v\n", err)
 		os.Exit(1)
 	}
-	defer healthResp.Body.Close()
+	defer func() { _ = healthResp.Body.Close() }()
 
 	var healthData json.RawMessage
-	json.NewDecoder(healthResp.Body).Decode(&healthData)
+	if err := json.NewDecoder(healthResp.Body).Decode(&healthData); err != nil {
+		fmt.Fprintf(os.Stderr, "decode health failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	output := map[string]json.RawMessage{
 		"state":  stateData,
@@ -236,5 +244,8 @@ func cmdStatus() {
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	enc.Encode(output)
+	if err := enc.Encode(output); err != nil {
+		fmt.Fprintf(os.Stderr, "encode output failed: %v\n", err)
+		os.Exit(1)
+	}
 }

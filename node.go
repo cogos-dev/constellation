@@ -132,7 +132,9 @@ func (n *Node) Stop() {
 	if n.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		n.server.Shutdown(ctx)
+		if err := n.server.Shutdown(ctx); err != nil {
+			log.Printf("[%s] Shutdown error: %v", n.Name, err)
+		}
 	}
 }
 

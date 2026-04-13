@@ -158,7 +158,7 @@ func sendHeartbeat(nodeName, addr string, hb *Heartbeat) {
 		log.Printf("[%s] Heartbeat to %s failed: %v", nodeName, addr, err)
 		return
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func sendJoinRequest(node *Node, addr string) error {
@@ -185,7 +185,7 @@ func sendJoinRequest(node *Node, addr string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("join request returned %d", resp.StatusCode)

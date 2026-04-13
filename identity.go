@@ -49,7 +49,7 @@ func SaveIdentity(id *NodeIdentity, dir string) error {
 	if err != nil {
 		return fmt.Errorf("create key file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	return pem.Encode(f, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 }

@@ -1,5 +1,8 @@
 # Constellation Protocol — Proof of Concept
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cogos-dev/constellation)](https://goreportcard.com/report/github.com/cogos-dev/constellation)
+
 A distributed identity protocol where trust is earned through temporal consistency, not granted by authority.
 
 Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from behavioral history rather than certificate authority. Stolen keys are insufficient for impersonation because trust is coupled to the full event chain, not just a credential.

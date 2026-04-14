@@ -98,7 +98,9 @@ func handlePeers(node *Node) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(node.Peers.Summarize())
+		if err := json.NewEncoder(w).Encode(node.Peers.Summarize()); err != nil {
+			log.Printf("[%s] Failed to encode peers response: %v", node.Name, err)
+		}
 	}
 }
 
@@ -125,10 +127,12 @@ func handleChallenge(node *Node) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"events":    events,
 			"coherence": ValidateCoherence(events),
-		})
+		}); err != nil {
+			log.Printf("[%s] Failed to encode challenge response: %v", node.Name, err)
+		}
 	}
 }
 
@@ -171,10 +175,12 @@ func handleJoin(node *Node) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"status": "accepted",
 			"peers":  peerAddrs,
-		})
+		}); err != nil {
+			log.Printf("[%s] Failed to encode join response: %v", node.Name, err)
+		}
 	}
 }
 
@@ -195,7 +201,9 @@ func handleHealth(node *Node) http.HandlerFunc {
 		if !report.Pass {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		json.NewEncoder(w).Encode(report)
+		if err := json.NewEncoder(w).Encode(report); err != nil {
+			log.Printf("[%s] Failed to encode health response: %v", node.Name, err)
+		}
 	}
 }
 
@@ -213,10 +221,12 @@ func handleState(node *Node) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"state": state,
 			"peers": node.Peers.Summarize(),
-		})
+		}); err != nil {
+			log.Printf("[%s] Failed to encode state response: %v", node.Name, err)
+		}
 	}
 }
 
@@ -245,7 +255,7 @@ func issueChallenge(node *Node, peer *PeerState) {
 		log.Printf("[%s] Challenge to %s failed: %v", node.Name, FormatNodeID(peer.NodeID), err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Events    []*EventEnvelope `json:"events"`

@@ -14,6 +14,7 @@ package constellation
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,9 @@ func startTestNode(t *testing.T, name string, port int, peers []string) (*Node, 
 		if err := node.Start(peers); err != nil {
 			// Ignore "server closed" errors during shutdown.
 			if err != http.ErrServerClosed {
-				t.Logf("[%s] Start error: %v", name, err)
+				// Use stdlib log here (not t.Logf) to avoid a logging race
+				// if this goroutine outlives the test body.
+				log.Printf("[%s] Start error: %v", name, err)
 			}
 		}
 	}()
@@ -174,8 +177,13 @@ func TestGitStore_LastEvent(t *testing.T) {
 	// Append 3 events.
 	priorHash := ""
 	for seq := int64(1); seq <= 3; seq++ {
-		env, _ := NewEvent("node1", "test", seq, priorHash, nil)
-		store.AppendEvent(env)
+		env, err := NewEvent("node1", "test", seq, priorHash, nil)
+		if err != nil {
+			t.Fatalf("NewEvent(%d) error: %v", seq, err)
+		}
+		if err := store.AppendEvent(env); err != nil {
+			t.Fatalf("AppendEvent(%d) error: %v", seq, err)
+		}
 		priorHash = env.Metadata.Hash
 	}
 
@@ -202,10 +210,15 @@ func TestGitStore_CorruptEvent_DetectedByCoherence(t *testing.T) {
 	// Build chain.
 	priorHash := ""
 	for seq := int64(1); seq <= 5; seq++ {
-		env, _ := NewEvent("node1", "test", seq, priorHash, map[string]interface{}{
+		env, err := NewEvent("node1", "test", seq, priorHash, map[string]interface{}{
 			"cycle": float64(seq),
 		})
-		store.AppendEvent(env)
+		if err != nil {
+			t.Fatalf("NewEvent(%d) error: %v", seq, err)
+		}
+		if err := store.AppendEvent(env); err != nil {
+			t.Fatalf("AppendEvent(%d) error: %v", seq, err)
+		}
 		priorHash = env.Metadata.Hash
 	}
 
@@ -507,9 +520,21 @@ func TestNode_TamperDetectedByHealthEndpoint(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var report CoherenceReport
-	json.NewDecoder(resp.Body).Decode(&report)
+	// /health intentionally returns 503 when report.Pass == false
+	// (protocol.go:200-203 — HTTP-native tamper signal, body still valid JSON).
+	// Accept 200 (healthy) or 503 (tamper). Fail on anything else, which would
+	// indicate a broken pipeline rather than a decisional output.
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("/health returned status %d, want 200 or 503", resp.StatusCode)
+	}
 
+	var report CoherenceReport
+	if err := json.NewDecoder(resp.Body).Decode(&report); err != nil {
+		t.Fatalf("decode /health body: %v", err)
+	}
+
+	// We want pass=false because tamper detection fired — confirmed by the
+	// explicit status/decode checks above (not because of a broken pipeline).
 	if report.Pass {
 		t.Error("/health should return pass=false after corruption")
 	}
@@ -616,10 +641,12 @@ func TestProtocol_PeersEndpoint(t *testing.T) {
 	}
 
 	var peers []PeerSummary
-	json.NewDecoder(resp.Body).Decode(&peers)
+	if err := json.NewDecoder(resp.Body).Decode(&peers); err != nil {
+		t.Fatalf("decode /peers body: %v", err)
+	}
 	// A fresh node with no configured peers should return an empty list.
 	if len(peers) != 0 {
-		t.Logf("peers: %v (expected 0 for solo node)", peers)
+		t.Errorf("expected empty peers on fresh node, got %d", len(peers))
 	}
 }
 

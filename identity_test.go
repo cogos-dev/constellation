@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
@@ -313,10 +314,20 @@ func TestPublicKeyFromDER_InvalidBytes(t *testing.T) {
 }
 
 func TestPublicKeyFromDER_NonECDSAKey(t *testing.T) {
-	// PublicKeyFromDER should reject a non-ECDSA key (e.g., RSA is not available
-	// in this test without importing crypto/rsa, so we test with a known failure).
-	// This test verifies the type assertion branch.
-	t.Skip("requires RSA key generation to test type assertion — deferred to manual review")
+	// PublicKeyFromDER should reject a valid-but-non-ECDSA public key.
+	// This exercises the type-assertion branch at identity.go:119–122.
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey() error: %v", err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
+	if err != nil {
+		t.Fatalf("MarshalPKIXPublicKey(RSA) error: %v", err)
+	}
+	_, err = PublicKeyFromDER(der)
+	if err == nil {
+		t.Fatal("expected error for non-ECDSA (RSA) key, got nil")
+	}
 }
 
 // ---------------------------------------------------------------------------

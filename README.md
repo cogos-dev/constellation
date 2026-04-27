@@ -5,7 +5,7 @@
 
 A distributed identity protocol where trust is earned through temporal consistency, not granted by authority.
 
-Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from behavioral history rather than certificate authority. Stolen keys are insufficient for impersonation because trust is coupled to the full event chain, not just a credential.
+Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from behavioral history rather than certificate authority. Stolen keys are insufficient for impersonation because trust is coupled to the full event chain, not just a credential. Trust is tracked as an exponential moving average (EMA) over heartbeat consistency.
 
 ## What This Proves
 
@@ -19,7 +19,7 @@ Each node validates its own coherence through a 3-layer stack applied to its git
 - **Schema validation**: Required fields present, valid RFC 3339 timestamps, non-empty hashes
 - **Temporal monotonicity**: Timestamps non-decreasing, sequence numbers contiguous
 
-A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. The validation is idempotent -- re-applying the rules to a consistent ledger leaves it unchanged.
+A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. The validation is idempotent: re-applying the rules to a consistent ledger leaves it unchanged.
 
 ### 2. O(1) Mutual Verification
 
@@ -276,14 +276,14 @@ apps/constellation-poc/
 
 Constellation is the trust layer in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem. It handles identity verification and trust scoring across distributed nodes.
 
-In a multi-node CogOS deployment (laptop, phone, desktop, cloud), each node maintains its own workspace and verifies peer coherence through Constellation. The kernel imports Constellation as a Go library via the `ConstellationBridge` interface -- in standalone mode, a `NilBridge` provides healthy defaults with zero overhead.
+In a multi-node CogOS deployment (laptop, phone, desktop, cloud), each node maintains its own workspace and verifies peer coherence through Constellation. The kernel imports Constellation as a Go library via the `ConstellationBridge` interface. In standalone mode, a `NilBridge` provides healthy defaults with zero overhead.
 
 Workspace sync uses Syncthing BEP as the transport layer, with signed `SyncEnvelopes` gated by trust score before ingestion.
 
 | Repo | Purpose |
 |------|---------|
 | [cogos](https://github.com/cogos-dev/cogos) | The daemon |
-| **constellation** | **Distributed identity and trust -- this repo** |
+| **constellation** | **Distributed identity and trust (this repo)** |
 | [mod3](https://github.com/cogos-dev/mod3) | Voice -- multi-model TTS |
 | [charts](https://github.com/cogos-dev/charts) | Helm charts for deployment |
 | [desktop](https://github.com/cogos-dev/desktop) | macOS dashboard app |

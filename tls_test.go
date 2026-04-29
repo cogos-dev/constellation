@@ -191,11 +191,11 @@ func TestProcessHeartbeat_SequenceDrift_TrustDecreases(t *testing.T) {
 
 	// First heartbeat establishes seq=1.
 	hb1 := &Heartbeat{NodeID: id.NodeID, Seq: 1}
-	pr.ProcessHeartbeat("peer1:8100", hb1, id.PublicKey)
+	_ = pr.ProcessHeartbeat("peer1:8100", hb1, id.PublicKey)
 
 	// Skip to seq=5 (drift).
 	hb2 := &Heartbeat{NodeID: id.NodeID, Seq: 5}
-	pr.ProcessHeartbeat("peer1:8100", hb2, id.PublicKey)
+	_ = pr.ProcessHeartbeat("peer1:8100", hb2, id.PublicKey)
 
 	peer := pr.GetPeer("peer1:8100")
 	if peer.DriftCount != 1 {
@@ -279,17 +279,17 @@ func TestProcessHeartbeat_DriftCount_Resets_OnConsistent(t *testing.T) {
 	id, _ := GenerateIdentity()
 
 	// Seq 1.
-	pr.ProcessHeartbeat("peer1:8100", &Heartbeat{NodeID: id.NodeID, Seq: 1}, id.PublicKey)
+	_ = pr.ProcessHeartbeat("peer1:8100", &Heartbeat{NodeID: id.NodeID, Seq: 1}, id.PublicKey)
 
 	// Drift: seq 5.
-	pr.ProcessHeartbeat("peer1:8100", &Heartbeat{NodeID: id.NodeID, Seq: 5}, id.PublicKey)
+	_ = pr.ProcessHeartbeat("peer1:8100", &Heartbeat{NodeID: id.NodeID, Seq: 5}, id.PublicKey)
 	peer := pr.GetPeer("peer1:8100")
 	if peer.DriftCount != 1 {
 		t.Errorf("drift count after gap = %d, want 1", peer.DriftCount)
 	}
 
 	// Consistent: seq 6.
-	pr.ProcessHeartbeat("peer1:8100", &Heartbeat{NodeID: id.NodeID, Seq: 6}, id.PublicKey)
+	_ = pr.ProcessHeartbeat("peer1:8100", &Heartbeat{NodeID: id.NodeID, Seq: 6}, id.PublicKey)
 	if peer.DriftCount != 0 {
 		t.Errorf("drift count after consistent = %d, want 0", peer.DriftCount)
 	}
@@ -456,7 +456,7 @@ func TestPeerRegistry_Summarize(t *testing.T) {
 
 	id, _ := GenerateIdentity()
 	hb := &Heartbeat{NodeID: id.NodeID, Seq: 1}
-	pr.ProcessHeartbeat("host1:8100", hb, id.PublicKey)
+	_ = pr.ProcessHeartbeat("host1:8100", hb, id.PublicKey)
 
 	summaries := pr.Summarize()
 	if len(summaries) != 1 {

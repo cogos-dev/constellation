@@ -1,64 +1,76 @@
-# Constellation Protocol — Proof of Concept
+# Constellation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cogos-dev/constellation)](https://goreportcard.com/report/github.com/cogos-dev/constellation)
 
-A distributed identity protocol where trust is earned through temporal consistency, not granted by authority.
+Constellation is the trust substrate of [CogOS](https://github.com/cogos-dev/cogos). This repo is the reference implementation of its L1 projection: a peer-to-peer node protocol where each node maintains a hash-chained event ledger in a git repository, broadcasts ECDSA-signed state snapshots to peers, and scores peers by behavioral consistency over time. The cogos kernel defines a `ConstellationBridge` seam designed to consume this protocol.
 
-Each node maintains a hash-chained event ledger in a git repository, broadcasts signed state snapshots to peers, and derives trust from behavioral history rather than certificate authority. Stolen keys are insufficient for impersonation because trust is coupled to the full event chain, not just a credential. Trust is tracked as an exponential moving average (EMA) over heartbeat consistency.
+## What this repo provides
 
-## What This Proves
+The L1 trust-node protocol, as a standalone Go module:
 
-Three properties, each demonstrated by a dedicated test scenario:
+- **Hash-chained ledger.** Append-only events stored as `events/{seq:08d}.json` in an in-process git repo (go-git). Each event commits to the prior event's hash. Canonicalization is RFC 8785 over JSON; content hashing is SHA-256.
+- **ECDSA P-256 identity.** `NodeID = SHA-256(pubkey DER)`. Keys are local; node IDs are derived, not registered.
+- **Signed heartbeats.** Every 5 seconds, each node signs `{node_id, listen_addr, tree_hash, seq, last_hash, timestamp}` and broadcasts to peers. The tree hash of `events/` is a compact state fingerprint: two nodes that agree on it agree on the entire ledger.
+- **EMA-weighted peer trust.** Each peer carries an exponentially-weighted moving average score over heartbeat consistency: `trust = 0.8 * trust + 0.2 * (consistent ? 1.0 : 0.0)`. Trust is earned, decays on drift, and gates whether a peer's claims are admitted.
+- **Three-layer self-coherence check.** A node validates its own ledger by hash-chain integrity, schema, and temporal monotonicity. The check is idempotent: re-applying it to a consistent ledger leaves it unchanged. A node that fails its own check reports `pass: false` on `/health`.
+- **Mutual O(1) verification.** Heartbeat verification is one signature check, one hash, one sequence comparison. No event replay. No Merkle-proof traversal.
 
-### 1. Self-Referential Closure
+## The Constellation substrate
 
-Each node validates its own coherence through a 3-layer stack applied to its git-backed event ledger:
+Constellation is one architecture applied to multiple node populations.
 
-- **Hash chain integrity**: `event[i].prior_hash == hash(event[i-1])` for all events, using SHA-256 over RFC 8785 canonical JSON
-- **Schema validation**: Required fields present, valid RFC 3339 timestamps, non-empty hashes
-- **Temporal monotonicity**: Timestamps non-decreasing, sequence numbers contiguous
+The same primitives (RFC 8785 canonical JSON, SHA-256 content hashing, a git-backed `events/{seq:08d}.json` chain with `prior_hash` linking, a tree-hash state fingerprint, and EMA-weighted decay signals over relationships) compose into a substrate that hosts:
 
-A node that detects its own incoherence reports `pass: false` on its `/health` endpoint. The validation is idempotent: re-applying the rules to a consistent ledger leaves it unchanged.
+| Population | What the node represents | Where it lives |
+|---|---|---|
+| Peer nodes | Physical machines participating in the trust mesh | This repo |
+| Identities | Principals (users, agent personas), OIDC-shaped (iss/sub/aud + claims) | cogos kernel, as a CRD |
+| Cogdocs | Memory atoms with frontmatter and refs | cogos kernel, in the workspace overlay |
+| Channels | Persistent conversation rooms | cogos kernel, as a CRD |
+| Sessions | Live agent or human attachments | cogos kernel, as bus events |
+| Agents | Reconciled agent specs | cogos kernel, as a CRD |
 
-### 2. O(1) Mutual Verification
+Each population gets hash-chained history, EMA-weighted relationship signals, and O(1) verification by being in the constellation. Adding a new population is a schema extension, not a structural rebuild.
 
-Nodes exchange signed heartbeats containing `{node_id, tree_hash, seq, last_hash, timestamp}`. Verification requires:
+This repo specifies and implements the peer-node projection. Other projections live in the [cogos kernel](https://github.com/cogos-dev/cogos), where the generic plan/apply reconciliation loop in `pkg/reconcile` interprets each population's spec.
 
-1. Check ECDSA signature (one crypto op)
-2. Verify NodeID matches public key (one hash)
-3. Check `seq == last_known_seq + 1` (one comparison)
+## Three-layer model
 
-No event replay, no Merkle proof traversal, no state synchronization. The tree hash of the git events directory serves as a compact state fingerprint -- if two nodes agree on the tree hash, they agree on all events.
+| Layer | What | Where |
+|---|---|---|
+| **L1 — Node** | Physical peer machine. ECDSA P-256 keypair, NodeID = SHA-256(pubkey DER), signed heartbeats, git-backed ledger. | This repo. |
+| **L2 — Identity** | Principal (user or agent persona). OIDC-shaped: iss, sub, aud, claims. Global identity, per-audience expressions. | cogos kernel: `kind: Identity` CRD reconciled by `pkg/reconcile`. L1 node keys sign L2 attestations. |
+| **L3 — Presence** | Ephemeral activation of an L2 identity. Spatial shape (current attention distribution) plus temporal pattern (recent action sequence). | Not stored. Query-derived from the kernel's attention table and bus event log. |
 
-### 3. Stolen Keys Insufficient for Impersonation
+L1 is necessary because peer-to-peer trust needs a stable signing key bound to a verifiable history. L2 is necessary because principals are not the same as machines (one user spans many machines; one machine hosts many agents). L3 is emergent because freezing it as state creates stale-presence bugs and blurs the line between pattern and instance.
 
-An attacker with a stolen ECDSA private key can sign valid heartbeats, but cannot forge the event history. When the attacker begins broadcasting heartbeats, existing peers observe:
+## Cross-workspace composition
 
-- **Sequence discontinuity**: The attacker's seq counter starts from 1; peers expect `last_known + 1`
-- **Identity conflict**: Two different addresses claim the same NodeID within a 30-second window
-- **Trust collapse**: The EMA trust score drops below the rejection threshold (0.2)
+The CogOS workspace model is hierarchical and recursive: a workspace can have an upstream the way a git repo has a remote, and that upstream can have its own upstream, with selective promotion of knowledge between layers. A workspace is just a directory with a `.cog/` overlay, and the overlay is composable across the hierarchy.
 
-The key alone is insufficient because trust is coupled to history. You can't impersonate a node without also producing an identical hash-chained event ledger — and the hash chain is computationally irreversible.
+That hierarchy needs trust to be safe. Constellation is the mechanism: peer nodes verify each other through hash-chained ledgers and EMA-weighted reputation, and trust scores gate which peers can attest to which knowledge. The substrate is what makes "compose workspaces like git remotes, but recursive" actually work without an authority granting permissions from above.
 
-## Architecture
+Status: BEP-based workspace sync currently gates peers by static configuration (per-peer `Trusted` flag). Constellation EMA-weighted gating of sync envelopes is in progress against the `ConstellationBridge` seam in the cogos kernel.
 
-### Node Structure
+## L1 protocol details
+
+### Node structure
 
 ```
 Node
 ├── Identity     ECDSA P-256 keypair, NodeID = SHA-256(pubkey DER)
 ├── GitStore     go-git in-process repo, events as events/{seq:08d}.json
-├── PeerRegistry Known peers, trust scores, identity conflict detection
-├── Heartbeat    5s ticker: generate event → commit → sign state → broadcast
+├── PeerRegistry Known peers, EMA trust scores, identity conflict detection
+├── Heartbeat    5s ticker: append event, commit, sign state, broadcast
 └── HTTP Server  6 endpoints for inter-node communication
 ```
 
-### Heartbeat Protocol
+### Heartbeat protocol
 
 Every 5 seconds, each node:
 
-1. Generates a simulated event and appends it to the ledger
+1. Generates an event and appends it to the ledger
 2. Commits the event to git as `events/{seq:08d}.json`
 3. Computes the tree hash of the `events/` directory
 4. Signs `{node_id, listen_addr, tree_hash, seq, last_hash, timestamp}` with its ECDSA key
@@ -72,20 +84,30 @@ On receipt, the peer:
 4. Updates the EMA trust score: `trust = 0.8 * trust + 0.2 * (consistent ? 1.0 : 0.0)`
 5. Checks for identity conflicts (same NodeID from different address within 30s)
 
-### Trust Scoring
+### Trust scoring
 
-Trust is tracked per-peer via exponential moving average (EMA) with decay factor 0.8:
+Trust is tracked per peer, per node, as an EMA over heartbeat consistency.
 
 | Level | Score | Meaning |
 |-------|-------|---------|
-| **Trusted** | >= 0.7 | Consistent heartbeat history, peer is reliable |
-| **Pending** | >= 0.4 | Insufficient history to judge |
-| **Suspect** | >= 0.2 | Recent inconsistencies detected |
-| **Rejected** | < 0.2 | Persistent drift or identity conflict |
+| Trusted | >= 0.7 | Consistent heartbeat history, peer is reliable |
+| Pending | >= 0.4 | Insufficient history to judge |
+| Suspect | >= 0.2 | Recent inconsistencies detected |
+| Rejected | < 0.2 | Persistent drift or identity conflict |
 
-After 2 consecutive drifts, a **challenge** is issued: the verifying node requests an event range from the suspect peer and re-validates the hash chain locally.
+After 2 consecutive drifts, the verifier issues a **challenge**: it requests an event range from the suspect peer and re-validates the hash chain locally.
 
-### HTTP Endpoints
+### Why a stolen key is insufficient
+
+An attacker holding a stolen private key can sign valid heartbeats, but cannot forge the event history. When the attacker begins broadcasting, existing peers observe:
+
+- **Sequence discontinuity.** The attacker's seq counter starts from 1; peers expect `last_known + 1`.
+- **Identity conflict.** Two different addresses claim the same NodeID within a 30-second window.
+- **Trust collapse.** The EMA trust score drops below the rejection threshold (0.2).
+
+The key alone is insufficient because trust is coupled to history, and the hash chain is computationally irreversible. This is the property that distinguishes constellation's trust model from a static-credential PKI: a credential alone is not a vouchable identity; the identity is the credential plus a verifiable behavioral history.
+
+### HTTP endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -95,27 +117,6 @@ After 2 consecutive drifts, a **challenge** is issued: the verifying node reques
 | POST | `/join` | New node announces itself, receives peer list |
 | GET | `/health` | Self-coherence check (3-layer validation) |
 | GET | `/state` | Full state dump (node state + peer summaries) |
-
-## Structural Isomorphism: Constellation vs. Blockchain
-
-| Concept | Blockchain | Constellation Protocol |
-|---------|-----------|----------------------|
-| **Identity** | Public key / address | NodeID = SHA-256(pubkey DER) |
-| **State** | Global UTXO set / account trie | Per-node git tree hash |
-| **Append-only log** | Block chain (linked list of blocks) | Hash-chained events in git (one file per event) |
-| **Tamper evidence** | Merkle root in block header | SHA-256 chain: `event[i].prior_hash = hash(event[i-1])` |
-| **State fingerprint** | Merkle Patricia Trie root | Git tree hash of `events/` directory |
-| **Consensus** | PoW / PoS / PBFT (O(n) to O(n^2)) | EMA trust scoring from heartbeat consistency (O(1) per peer) |
-| **Finality** | Probabilistic (6 confirmations) or expensive (PBFT) | Instant (coherence check = final) |
-| **Fork choice rule** | Longest chain / heaviest subtree | Highest coherence score |
-| **Sybil resistance** | PoW (energy) / PoS (capital) | Not needed (cooperative threat model) |
-| **Threat model** | Adversarial (Byzantine nodes) | Cooperative (nodes drift, not lie) |
-| **Challenge mechanism** | Fraud proofs / validity proofs | Event range re-validation on drift |
-| **Node discovery** | Gossip protocol (Kademlia DHT) | Join handshake + peer list exchange |
-| **Scaling** | Each node increases consensus cost for all | Each node only increases local cost until closure |
-| **Thermodynamic cost** | PoW: mass energy per hash | Coherence validation: ln(2) per distinction (Landauer) |
-
-The key divergence: blockchain assumes no trust boundary, requiring expensive global consensus. This protocol assumes cooperative agents that may drift but don't actively deceive, enabling O(1) verification via temporal coupling.
 
 ## Running
 
@@ -128,15 +129,14 @@ The key divergence: blockchain assumes no trust boundary, requiring expensive gl
 ### Local (3 processes)
 
 ```bash
-cd apps/constellation-poc
-go build -o constellation-poc .
+go build -o constellation ./cmd/constellation
 
 # Terminal 1: Start 3 nodes
-./constellation-poc node --name alpha --port 8101 --hostname localhost \
+./constellation node --name alpha --port 8101 --hostname localhost \
     --data-dir /tmp/constellation/alpha --peers localhost:8102,localhost:8103 &
-./constellation-poc node --name beta  --port 8102 --hostname localhost \
+./constellation node --name beta  --port 8102 --hostname localhost \
     --data-dir /tmp/constellation/beta  --peers localhost:8101,localhost:8103 &
-./constellation-poc node --name gamma --port 8103 --hostname localhost \
+./constellation node --name gamma --port 8103 --hostname localhost \
     --data-dir /tmp/constellation/gamma --peers localhost:8101,localhost:8102 &
 
 # Wait ~30s for trust to converge, then query:
@@ -147,7 +147,6 @@ curl -s http://localhost:8101/health | jq .
 ### Docker Compose (3-node constellation)
 
 ```bash
-cd apps/constellation-poc
 docker compose up -d --build
 
 # Query nodes on host ports 8101-8103:
@@ -155,31 +154,33 @@ curl -s http://localhost:8101/peers | jq .
 curl -s http://localhost:8102/health | jq .
 ```
 
-### CLI Commands
+### CLI commands
 
 ```bash
 # Start a node
-constellation-poc node --name NAME --port PORT --hostname HOST \
+constellation node --name NAME --port PORT --hostname HOST \
     --data-dir DIR --peers HOST1:PORT1,HOST2:PORT2
 
 # Query node state
-constellation-poc status --target http://localhost:8101
+constellation status --target http://localhost:8101
 
-# Tamper info (actual tampering done via file modification or docker exec)
-constellation-poc tamper --target http://localhost:8101
+# Tamper info (actual tampering is done via file modification or docker exec)
+constellation tamper --target http://localhost:8101
 ```
 
-## Test Scenarios
+## Test scenarios
 
-### Scenario 1: Happy Path — Trust Convergence
+Each scenario exercises one of the protocol's properties end-to-end.
 
-Start 3 nodes, wait for ~6 heartbeat cycles (30s), verify all peers reach trusted status.
+### Trust convergence
+
+Three nodes, ~6 heartbeat cycles (30s), all peers reach trusted status.
 
 ```bash
 bash test/scenario_happy.sh
 ```
 
-**Expected output:**
+Expected:
 ```
 Port 8101: 2 trusted / 2 total peers
 Port 8102: 2 trusted / 2 total peers
@@ -187,69 +188,69 @@ Port 8103: 2 trusted / 2 total peers
 [PASS] All 3 nodes show 2+ trusted peers
 ```
 
-**What it demonstrates:** Nodes that maintain consistent hash-chained ledgers converge to mutual trust through temporal coupling alone — no certificate authority, no pre-shared secrets, no consensus protocol.
+What it verifies: nodes that maintain consistent hash-chained ledgers converge to mutual trust through heartbeat exchange alone. No certificate authority. No pre-shared secrets. No consensus protocol.
 
-### Scenario 2: Drift Detection — Tamper Self-Detection
+### Tamper detection
 
-Start 3 nodes, wait for trust, then corrupt an event file in alpha's git repo. Verify alpha's `/health` endpoint detects the tampering.
+Three nodes, trust converges, then an event file in alpha's git repo is corrupted on disk. Alpha's `/health` detects it.
 
 ```bash
 bash test/scenario_drift.sh
 ```
 
-**Expected output:**
+Expected:
 ```
 Alpha's /health reports pass: false
   hash_chain: tampered at seq N: computed abc... != stored def...
 [PASS]
 ```
 
-**What it demonstrates:** The 3-layer coherence validation detects any modification to the event history. The hash chain is self-verifying — each event commits to the hash of all prior events.
+What it verifies: the three-layer coherence validation detects any modification to the event history. Each event commits to all prior events' hashes, so tampering is locally observable without involving peers.
 
-### Scenario 3: Key Theft — Stolen Credentials Rejected
+### Stolen-key rejection
 
-Start 3 nodes, wait for trust, copy alpha's private key to an attacker node, start the attacker. Verify that beta and gamma reject the impostor.
+Three nodes, trust converges, alpha's private key is copied to an attacker node, the attacker is started. Beta and gamma reject the impostor.
 
 ```bash
 bash test/scenario_theft.sh
 ```
 
-**Expected output:**
+Expected:
 ```
 Beta:  NodeID a7ecf... → rejected: true, trust: 0
 Gamma: NodeID a7ecf... → rejected: true, trust: 0
 [PASS]
 ```
 
-**What it demonstrates:** A stolen ECDSA key can sign valid heartbeats but cannot forge event history. The attacker's heartbeats show sequence discontinuity (seq 1 when peers expect seq N+1), triggering identity conflict detection. Trust is coupled to history, not credentials.
+What it verifies: a stolen ECDSA key signs valid heartbeats but cannot forge event history. The attacker's seq starts from 1 when peers expect seq N+1, triggering identity conflict detection. Trust is coupled to history, not credentials.
 
-### Scenario 4: Dynamic Join — New Node Achieves Trust
+### Dynamic join
 
-Start 3 nodes, wait for trust, then start delta pointing at alpha. Verify delta discovers all peers through the join handshake and achieves trusted status.
+Three nodes, trust converges, delta starts pointing at alpha, delta discovers all peers and earns trusted status.
 
 ```bash
 bash test/scenario_join.sh
 ```
 
-**Expected output:**
+Expected:
 ```
 Alpha: delta trust 0.84 (trusted)
 Delta: alpha trust 0.84 (trusted), beta trust 0.80 (trusted), gamma trust 0.80 (trusted)
 [PASS]
 ```
 
-**What it demonstrates:** Trust is earned through consistent behavior over time, not granted by authority. A new node bootstraps by joining the constellation and building a coherent event history that peers can verify.
+What it verifies: a new node bootstraps by joining the constellation and building a coherent event history that peers can verify. Trust is earned over time, not granted by an authority at registration.
 
-### Run All Scenarios
+### Run all scenarios
 
 ```bash
 bash test/run_scenarios.sh
 ```
 
-## File Structure
+## Repo layout
 
 ```
-apps/constellation-poc/
+.
 ├── go.mod                      # Standalone module, dep: go-git/v5
 ├── go.sum
 ├── ledger.go                   # RFC 8785 canonical JSON, SHA-256 hash chain
@@ -258,45 +259,35 @@ apps/constellation-poc/
 ├── coherence.go                # 3-layer validation (chain, schema, temporal)
 ├── node.go                     # Node lifecycle, state management
 ├── protocol.go                 # HTTP handlers (6 endpoints)
-├── heartbeat.go                # Background ticker, ECDSA-signed state broadcast
+├── heartbeat.go                # Background ticker, ECDSA-signed broadcast
 ├── constellation.go            # EMA trust scoring, identity conflict detection
-├── main.go                     # CLI: node, inject, tamper, status
+├── cmd/constellation/          # CLI: node, status, tamper
 ├── Dockerfile                  # Multi-stage: golang:1.24-alpine → alpine:3.21
 ├── docker-compose.yml          # 3-node constellation (alpha, beta, gamma)
 ├── docker-compose.test.yml     # Test overlays (delta join, attacker theft)
 └── test/
     ├── scenario_happy.sh       # Trust convergence
     ├── scenario_drift.sh       # Tamper detection
-    ├── scenario_theft.sh       # Key theft rejection
+    ├── scenario_theft.sh       # Stolen-key rejection
     ├── scenario_join.sh        # Dynamic join
     └── run_scenarios.sh        # Run all, report PASS/FAIL
 ```
 
-## Connection to CogOS
+## Ecosystem
 
-Constellation is the trust layer in the [CogOS](https://github.com/cogos-dev/cogos) ecosystem. It handles identity verification and trust scoring across distributed nodes.
-
-In a multi-node CogOS deployment (laptop, phone, desktop, cloud), each node maintains its own workspace and verifies peer coherence through Constellation. The kernel imports Constellation as a Go library via the `ConstellationBridge` interface. In standalone mode, a `NilBridge` provides healthy defaults with zero overhead.
-
-Workspace sync uses Syncthing BEP as the transport layer, with signed `SyncEnvelopes` gated by trust score before ingestion.
+Constellation is one piece of the [CogOS](https://github.com/cogos-dev/cogos) ecosystem.
 
 | Repo | Purpose |
 |------|---------|
-| [cogos](https://github.com/cogos-dev/cogos) | The daemon |
-| **constellation** | **Distributed identity and trust (this repo)** |
-| [mod3](https://github.com/cogos-dev/mod3) | Voice -- multi-model TTS |
-| [charts](https://github.com/cogos-dev/charts) | Helm charts for deployment |
-| [desktop](https://github.com/cogos-dev/desktop) | macOS dashboard app |
-| [skills](https://github.com/cogos-dev/skills) | Agent skill library |
+| [cogos](https://github.com/cogos-dev/cogos) | The kernel daemon. Workspace state, context assembly, multi-provider inference routing, hash-chained ledger, MCP server, agent harness. |
+| **constellation** | **L1 trust-node protocol (this repo).** |
+| [mod3](https://github.com/cogos-dev/mod3) | Voice channel. Multi-model TTS with queue-aware output. |
+| [skills](https://github.com/cogos-dev/skills) | Portable skill definitions for Claude Code and compatible agents. |
+| [charts](https://github.com/cogos-dev/charts) | Helm charts for deploying CogOS nodes to Kubernetes. |
+| [research](https://github.com/cogos-dev/research) | Notes and the training pipeline behind the kernel's design choices. |
 
-For the full system specification: [CogOS System Spec](https://github.com/cogos-dev/cogos/blob/main/docs/SYSTEM-SPEC.md)
-For the research paper thesis: [Paper Thesis](docs/PAPER.md)
+For the research-paper version of this repo's contribution, see [docs/PAPER.md](docs/PAPER.md). For the full system specification, see the [cogos repo](https://github.com/cogos-dev/cogos).
 
-## Theoretical Context
+## License
 
-The protocol models identity as a fixed point of a self-validating process:
-
-- **Self-referential closure** (`x = F(x)`): A node's coherence check is idempotent -- re-applying validation leaves the system unchanged
-- **Temporal coupling** (not mechanical): Nodes couple through shared timeline, not forced consensus
-
-The key insight: blockchain's O(n^2) consensus cost arises from treating identity as a static credential in an adversarial environment. When identity is instead tied to behavioral history, verification becomes O(1) per peer and stolen credentials become insufficient for impersonation.
+MIT.

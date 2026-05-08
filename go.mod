@@ -1,4 +1,4 @@
-module github.com/cogos-dev/constellation
+module github.com/myrgic/constellation
 
 go 1.24
 

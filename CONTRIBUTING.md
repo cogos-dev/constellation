@@ -5,7 +5,7 @@ Thanks for your interest in the Constellation identity protocol. This document c
 ## Development setup
 
 ```sh
-git clone https://github.com/cogos-dev/constellation.git
+git clone https://github.com/myrgic/constellation.git
 cd constellation
 go mod download
 go build ./...
@@ -42,7 +42,7 @@ Commit messages: conventional-commits (`feat:`, `fix:`, `chore:`, etc.) preferre
 
 ## Reporting issues
 
-Use the org-level [Bug Report](https://github.com/cogos-dev/constellation/issues/new?template=bug.yml) or [Feature Request](https://github.com/cogos-dev/constellation/issues/new?template=feature.yml) forms.
+Use the org-level [Bug Report](https://github.com/myrgic/constellation/issues/new?template=bug.yml) or [Feature Request](https://github.com/myrgic/constellation/issues/new?template=feature.yml) forms.
 
 ## License
 

@@ -27,7 +27,7 @@ Proof-of-concept distributed identity and trust protocol for AI agent networks.
 - 3-layer coherence: hash chain, schema, and temporal monotonicity validation
 - Hash-chained ledger: append-only event log with canonical JSON serialization
 - HTTP protocol: heartbeat, peer discovery, challenge, join endpoints
-- Standalone binary via `go install github.com/cogos-dev/constellation/cmd/constellation@v0.1.0`
+- Standalone binary via `go install github.com/myrgic/constellation/cmd/constellation@v0.1.0`
 
-[Unreleased]: https://github.com/cogos-dev/constellation/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/cogos-dev/constellation/releases/tag/v0.1.0
+[Unreleased]: https://github.com/myrgic/constellation/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/myrgic/constellation/releases/tag/v0.1.0

@@ -16,6 +16,14 @@ Commit-message convention: [Conventional Commits](https://www.conventionalcommit
 
 ### Fixed
 
+## [0.2.0] - 2026-05-08
+
+### Changed
+
+- Go module path renamed from `github.com/cogos-dev/constellation` to `github.com/myrgic/constellation` (org rename).
+- CI: reusable workflow source updated to `myrgic/.github`.
+- All documentation URLs updated to `myrgic/` org.
+
 ## [0.1.0] - 2026-04-14
 
 Proof-of-concept distributed identity and trust protocol for AI agent networks.
@@ -27,7 +35,8 @@ Proof-of-concept distributed identity and trust protocol for AI agent networks.
 - 3-layer coherence: hash chain, schema, and temporal monotonicity validation
 - Hash-chained ledger: append-only event log with canonical JSON serialization
 - HTTP protocol: heartbeat, peer discovery, challenge, join endpoints
-- Standalone binary via `go install github.com/cogos-dev/constellation/cmd/constellation@v0.1.0`
+- Standalone binary via `go install github.com/myrgic/constellation/cmd/constellation@v0.1.0`
 
-[Unreleased]: https://github.com/cogos-dev/constellation/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/cogos-dev/constellation/releases/tag/v0.1.0
+[Unreleased]: https://github.com/myrgic/constellation/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/myrgic/constellation/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/myrgic/constellation/releases/tag/v0.1.0

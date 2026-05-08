@@ -1,9 +1,9 @@
 # Constellation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cogos-dev/constellation)](https://goreportcard.com/report/github.com/cogos-dev/constellation)
+[![Go Report Card](https://goreportcard.com/badge/github.com/myrgic/constellation)](https://goreportcard.com/report/github.com/myrgic/constellation)
 
-Constellation is the trust substrate of [CogOS](https://github.com/cogos-dev/cogos). This repo is the reference implementation of its L1 projection: a peer-to-peer node protocol where each node maintains a hash-chained event ledger in a git repository, broadcasts ECDSA-signed state snapshots to peers, and scores peers by behavioral consistency over time. The cogos kernel defines a `ConstellationBridge` seam designed to consume this protocol.
+Constellation is the trust substrate of [CogOS](https://github.com/myrgic/cogos). This repo is the reference implementation of its L1 projection: a peer-to-peer node protocol where each node maintains a hash-chained event ledger in a git repository, broadcasts ECDSA-signed state snapshots to peers, and scores peers by behavioral consistency over time. The cogos kernel defines a `ConstellationBridge` seam designed to consume this protocol.
 
 ## What this repo provides
 
@@ -33,7 +33,7 @@ The same primitives (RFC 8785 canonical JSON, SHA-256 content hashing, a git-bac
 
 Each population gets hash-chained history, EMA-weighted relationship signals, and O(1) verification by being in the constellation. Adding a new population is a schema extension, not a structural rebuild.
 
-This repo specifies and implements the peer-node projection. Other projections live in the [cogos kernel](https://github.com/cogos-dev/cogos), where the generic plan/apply reconciliation loop in `pkg/reconcile` interprets each population's spec.
+This repo specifies and implements the peer-node projection. Other projections live in the [cogos kernel](https://github.com/myrgic/cogos), where the generic plan/apply reconciliation loop in `pkg/reconcile` interprets each population's spec.
 
 ## Three-layer model
 
@@ -275,18 +275,18 @@ bash test/run_scenarios.sh
 
 ## Ecosystem
 
-Constellation is one piece of the [CogOS](https://github.com/cogos-dev/cogos) ecosystem.
+Constellation is one piece of the [CogOS](https://github.com/myrgic/cogos) ecosystem.
 
 | Repo | Purpose |
 |------|---------|
-| [cogos](https://github.com/cogos-dev/cogos) | The kernel daemon. Workspace state, context assembly, multi-provider inference routing, hash-chained ledger, MCP server, agent harness. |
+| [cogos](https://github.com/myrgic/cogos) | The kernel daemon. Workspace state, context assembly, multi-provider inference routing, hash-chained ledger, MCP server, agent harness. |
 | **constellation** | **L1 trust-node protocol (this repo).** |
-| [mod3](https://github.com/cogos-dev/mod3) | Voice channel. Multi-model TTS with queue-aware output. |
-| [skills](https://github.com/cogos-dev/skills) | Portable skill definitions for Claude Code and compatible agents. |
-| [charts](https://github.com/cogos-dev/charts) | Helm charts for deploying CogOS nodes to Kubernetes. |
-| [research](https://github.com/cogos-dev/research) | Notes and the training pipeline behind the kernel's design choices. |
+| [mod3](https://github.com/myrgic/mod3) | Voice channel. Multi-model TTS with queue-aware output. |
+| [skills](https://github.com/myrgic/skills) | Portable skill definitions for Claude Code and compatible agents. |
+| [charts](https://github.com/myrgic/charts) | Helm charts for deploying CogOS nodes to Kubernetes. |
+| [research](https://github.com/myrgic/research) | Notes and the training pipeline behind the kernel's design choices. |
 
-For the research-paper version of this repo's contribution, see [docs/PAPER.md](docs/PAPER.md). For the full system specification, see the [cogos repo](https://github.com/cogos-dev/cogos).
+For the research-paper version of this repo's contribution, see [docs/PAPER.md](docs/PAPER.md). For the full system specification, see the [cogos repo](https://github.com/myrgic/cogos).
 
 ## License
 
